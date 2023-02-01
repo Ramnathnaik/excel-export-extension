@@ -106,7 +106,7 @@ function processDashboard(dashboard, workbook) {
                                         tt.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 22, name: 'Calibri', color: { rgb: 'f1f1f1' } } } });
                                     }
                                     if (i == columnLength - 2) {
-                                        rr.push({ v: `Report executed by ${user} ${reportRefreshTime}`, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
+                                        rr.push({ v: `Report executed by ${user};  @${reportRefreshTime}`, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
                                     } else {
                                         rr.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
                                     }
@@ -134,7 +134,7 @@ function processDashboard(dashboard, workbook) {
                                 tt = [];
                                 for (let i = 0; i < columnLength; i++) {
                                     let colEle = columns[i];
-                                    tt.push({ v: colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true } } });
+                                    tt.push({ v: colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
                                 }
 
                                 result.push(tt);
@@ -144,7 +144,7 @@ function processDashboard(dashboard, workbook) {
                                     let arrEle = colData[i];
                                     let tempArr = [];
                                     for (let j = 0; j < arrEle.length; j++) {
-                                        tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? {horizontal: 'left' } : {horizontal: 'right' }} });
+                                        tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value)  ? {horizontal: 'left' } : {horizontal: 'right' }} });
                                     }
                                     result.push(tempArr);
                                 }

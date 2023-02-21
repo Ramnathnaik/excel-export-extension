@@ -14,7 +14,7 @@ window.onload = function () {
 
             //PROMISE
             Promise.all([processDashboard(dashboard, workbook)]).then((values) => {
-                console.log('in 3rd task');
+                console.log('in 3rd task-V2');
                 // "FORCE DOWNLOAD" XLSX FILE
                 var today = new Date();
                 var date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
@@ -40,6 +40,11 @@ function getIndex(arr, name) {
     const { length } = arr;
     const id = length + 1;
     return arr.findIndex(el => el.fieldName === name);
+}
+
+//returns an array of elements with includes given name
+function getIncludedArr(arr, name) {
+    return arr.filter(x => x.fieldName.includes(name)).map(x => x.fieldName);
 }
 
 function processDashboard(dashboard, workbook) {
@@ -73,16 +78,28 @@ function processDashboard(dashboard, workbook) {
                     let reportHeader = dashboardData[0][getIndex(dashboardColumns, 'Report Header')].value;
                     let reportRefreshTime = dashboardData[0][getIndex(dashboardColumns, 'Report Refresh Time')].value;
                     let reportFooter = dashboardData[0][getIndex(dashboardColumns, 'Report Footer')].value;
-                    let param1 = getIndex(dashboardColumns, 'Param1') != -1 ? 
-                        dashboardData[0][getIndex(dashboardColumns, 'Param1')].value : '';
-                    let param2 = getIndex(dashboardColumns, 'Param2') != -1 ? 
-                        dashboardData[0][getIndex(dashboardColumns, 'Param2')].value : '';
-                    let param3 = getIndex(dashboardColumns, 'Param3') != -1 ? 
-                        dashboardData[0][getIndex(dashboardColumns, 'Param3')].value : '';
-                    let param4 = getIndex(dashboardColumns, 'Param4') != -1 ? 
-                        dashboardData[0][getIndex(dashboardColumns, 'Param4')].value : '';
+                    // let param1 = getIndex(dashboardColumns, 'Param1') != -1 ? 
+                    //     dashboardData[0][getIndex(dashboardColumns, 'Param1')].value : '';
+                    // let param2 = getIndex(dashboardColumns, 'Param2') != -1 ? 
+                    //     dashboardData[0][getIndex(dashboardColumns, 'Param2')].value : '';
+                    // let param3 = getIndex(dashboardColumns, 'Param3') != -1 ? 
+                    //     dashboardData[0][getIndex(dashboardColumns, 'Param3')].value : '';
+                    // let param4 = getIndex(dashboardColumns, 'Param4') != -1 ? 
+                    //     dashboardData[0][getIndex(dashboardColumns, 'Param4')].value : '';
                     let user = dashboardData[0][getIndex(dashboardColumns, 'User')].value;
                     //let sheetOrder = dashboardData[0][getIndex(dashboardColumns, 'Sheet order')].value;
+
+                    let p = '';
+                    let paramsArr = getIncludedArr(dashboardColumns, 'Param');
+                    paramsArr.forEach(param => {
+                        p += dashboardData[0][getIndex(dashboardColumns, param)].value + ';  ';
+                    });
+
+                    let f = '';
+                    let filtersArr = getIncludedArr(dashboardColumns, 'Filter');
+                    filtersArr.forEach(filter => {
+                        f += dashboardData[0][getIndex(dashboardColumns, filter)].value + ';  ';
+                    });
 
                     await dashboard.worksheets.forEach(async function (sheet) {
                         if (sheet.name === sheetName) {
@@ -106,7 +123,7 @@ function processDashboard(dashboard, workbook) {
                                         tt.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 22, name: 'Calibri', color: { rgb: 'f1f1f1' } } } });
                                     }
                                     if (i == columnLength - 2) {
-                                        rr.push({ v: `Report executed by ${user};  @${reportRefreshTime}`, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
+                                        rr.push({ v: `Report executed by ${user} ${reportRefreshTime}`, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
                                     } else {
                                         rr.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
                                     }
@@ -118,7 +135,6 @@ function processDashboard(dashboard, workbook) {
                                 tt = [];
                                 for (let i = 0; i < columnLength; i++) {
                                     if (i == columnLength -2) {
-                                        let p = param1 != '' && param2 != '' && param3 != '' && param4 != '' ? `${param1};   ${param2};   ${param3};   ${param4};` : param1 != '' && param2 != '' && param3 != '' ? `${param1};   ${param2};   ${param3};` : param1 != '' && param2 != '' ? `${param1};   ${param2};` : param1 != '' ? `${param1};` : '';
                                         tt.push({ v: p, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
                                     } else {
                                         tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
@@ -127,6 +143,17 @@ function processDashboard(dashboard, workbook) {
 
                                 result.push(empt);
                                 result.push(rr);
+                                result.push(tt);
+
+                                tt = [];
+                                for (let i = 0; i < columnLength; i++) {
+                                    if (i == columnLength -2) {
+                                        tt.push({ v: f, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                    } else {
+                                        tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                    }
+                                }
+
                                 result.push(tt);
                                 result.push(empt);
                                 result.push(empt);
@@ -143,7 +170,12 @@ function processDashboard(dashboard, workbook) {
                                 for (let i = 0; i < colData.length; i++) {
                                     let arrEle = colData[i];
                                     let tempArr = [];
+                                    let isDataString = false;
                                     for (let j = 0; j < arrEle.length; j++) {
+                                        if (j == 0) {
+                                            isDataString = colData.some((ee) => (isNaN(ee[0].value) && (ee[0].value != '%null%')));
+                                            console.log(isDataString);
+                                        }
                                         tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value)  ? {horizontal: 'left' } : {horizontal: 'right' }} });
                                     }
                                     result.push(tempArr);
@@ -165,7 +197,7 @@ function processDashboard(dashboard, workbook) {
                                 //CREATE WORKSHEET(S) AND ADD IT TO EXCEL FILE
                                 let worksheet = XLSX.utils.aoa_to_sheet(result);
 
-                                let rowFooterMergeStart = 9 + sheetData.totalRowCount;
+                                let rowFooterMergeStart = 10 + sheetData.totalRowCount;
 
                                 worksheet['!cols'] = fitToColumn(result);
                                 worksheet['!rows'] = [{ 'hpt': 40 }];
@@ -187,8 +219,9 @@ function processDashboard(dashboard, workbook) {
                                     //worksheetArr.sort((a, b) => a.index - b.index);
                                     worksheetArr.forEach((worksheetInfo) => {
                                         //console.log(worksheetInfo.index);
-                                        workbook.SheetNames.push("Excel-Output- " + worksheetInfo.name);
-                                        workbook.Sheets["Excel-Output- " + worksheetInfo.name] = worksheetInfo.worksheet;
+                                        worksheetInfo.name = worksheetInfo.name.length >=31 ? worksheetInfo.name.substring(0, 30) : worksheetInfo.name;
+                                        workbook.SheetNames.push(worksheetInfo.name);
+                                        workbook.Sheets[worksheetInfo.name] = worksheetInfo.worksheet;
                                     });
                                     console.log('ended');
                                     resolve();

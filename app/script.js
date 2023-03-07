@@ -4,17 +4,17 @@ window.onload = function () {
 
     //FUNCTION RUNS ON BUTTON CLICK
     document.getElementById("demo").onclick = () => {
-       
+
         //TABLEAU EXTENSION API
         tableau.extensions.initializeAsync().then(function () {
             let dashboard = tableau.extensions.dashboardContent.dashboard;
-            
+
             // CREATE NEW EXCEL "FILE"
             var workbook = XLSX.utils.book_new();
 
             //PROMISE
             Promise.all([processDashboard(dashboard, workbook)]).then((values) => {
-                console.log('in 3rd task-V2');
+                console.log('in 3rd task - V4');
                 // "FORCE DOWNLOAD" XLSX FILE
                 var today = new Date();
                 var date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
@@ -78,14 +78,17 @@ function processDashboard(dashboard, workbook) {
                     let reportHeader = dashboardData[0][getIndex(dashboardColumns, 'Report Header')].value;
                     let reportRefreshTime = dashboardData[0][getIndex(dashboardColumns, 'Report Refresh Time')].value;
                     let reportFooter = dashboardData[0][getIndex(dashboardColumns, 'Report Footer')].value;
-                    // let param1 = getIndex(dashboardColumns, 'Param1') != -1 ? 
-                    //     dashboardData[0][getIndex(dashboardColumns, 'Param1')].value : '';
-                    // let param2 = getIndex(dashboardColumns, 'Param2') != -1 ? 
-                    //     dashboardData[0][getIndex(dashboardColumns, 'Param2')].value : '';
-                    // let param3 = getIndex(dashboardColumns, 'Param3') != -1 ? 
-                    //     dashboardData[0][getIndex(dashboardColumns, 'Param3')].value : '';
-                    // let param4 = getIndex(dashboardColumns, 'Param4') != -1 ? 
-                    //     dashboardData[0][getIndex(dashboardColumns, 'Param4')].value : '';
+
+                    let groupsParams = '';
+                    if (getIndex(dashboardColumns, 'Groups Parameter') != -1) {
+                        groupsParams = dashboardData[0][getIndex(dashboardColumns, 'Groups Parameter')].value;
+                    }
+
+                    let setsParams = '';
+                    if (getIndex(dashboardColumns, 'Sets Parameter') != -1) {
+                        setsParams = dashboardData[0][getIndex(dashboardColumns, 'Sets Parameter')].value;
+                    }
+
                     let user = dashboardData[0][getIndex(dashboardColumns, 'User')].value;
                     //let sheetOrder = dashboardData[0][getIndex(dashboardColumns, 'Sheet order')].value;
 
@@ -131,37 +134,64 @@ function processDashboard(dashboard, workbook) {
                                 }
 
                                 result.push(tt);
-
-                                tt = [];
-                                for (let i = 0; i < columnLength; i++) {
-                                    if (i == columnLength -2) {
-                                        tt.push({ v: p, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                    } else {
-                                        tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                    }
-                                }
-
                                 result.push(empt);
                                 result.push(rr);
-                                result.push(tt);
 
-                                tt = [];
-                                for (let i = 0; i < columnLength; i++) {
-                                    if (i == columnLength -2) {
-                                        tt.push({ v: f, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                    } else {
-                                        tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                if (p != '') {
+                                    tt = [];
+                                    for (let i = 0; i < columnLength; i++) {
+                                        if (i == columnLength - 2) {
+                                            tt.push({ v: p, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                        } else {
+                                            tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                        }
                                     }
+                                    result.push(tt);
                                 }
 
-                                result.push(tt);
+                                if (f != '') {
+                                    tt = [];
+                                    for (let i = 0; i < columnLength; i++) {
+                                        if (i == columnLength - 2) {
+                                            tt.push({ v: f, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                        } else {
+                                            tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                        }
+                                    }
+                                    result.push(tt);
+                                }
+
+                                if (groupsParams != '') {
+                                    tt = [];
+                                    for (let i = 0; i < columnLength; i++) {
+                                        if (i == columnLength - 2) {
+                                            tt.push({ v: groupsParams, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                        } else {
+                                            tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                        }
+                                    }
+                                    result.push(tt);
+                                }
+
+                                if (setsParams != '') {
+                                    tt = [];
+                                    for (let i = 0; i < columnLength; i++) {
+                                        if (i == columnLength - 2) {
+                                            tt.push({ v: setsParams, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                        } else {
+                                            tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                        }
+                                    }
+                                    result.push(tt);
+                                }
+
                                 result.push(empt);
                                 result.push(empt);
 
                                 tt = [];
                                 for (let i = 0; i < columnLength; i++) {
                                     let colEle = columns[i];
-                                    tt.push({ v: colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                    tt.push({ v: colEle.fieldName.startsWith('SUM(') && colEle.fieldName.endsWith(')') ? colEle.fieldName.substring(3, colEle.fieldName.length-1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
                                 }
 
                                 result.push(tt);
@@ -176,7 +206,7 @@ function processDashboard(dashboard, workbook) {
                                             isDataString = colData.some((ee) => (isNaN(ee[0].value) && (ee[0].value != '%null%')));
                                             console.log(isDataString);
                                         }
-                                        tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value)  ? {horizontal: 'left' } : {horizontal: 'right' }} });
+                                        tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
                                     }
                                     result.push(tempArr);
                                 }
@@ -198,14 +228,20 @@ function processDashboard(dashboard, workbook) {
                                 let worksheet = XLSX.utils.aoa_to_sheet(result);
 
                                 let rowFooterMergeStart = 10 + sheetData.totalRowCount;
+                                rowFooterMergeStart = groupsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
+                                rowFooterMergeStart = setsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
 
                                 worksheet['!cols'] = fitToColumn(result);
                                 worksheet['!rows'] = [{ 'hpt': 40 }];
                                 worksheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 1, c: columnLength - 1 } },
-                                { s: { r: 2, c: columnLength - 2 }, e: { r: 2, c: columnLength - 1 } },
-                                { s: { r: 3, c: columnLength - 2 }, e: { r: 3, c: columnLength - 1 } },
                                 { s: { r: rowFooterMergeStart, c: 0 }, e: { r: rowFooterMergeStart + 2, c: columnLength - 1 } }
                                 ];
+
+                                worksheet["!merges"].push({ s: { r: 2, c: columnLength - 2 }, e: { r: 2, c: columnLength - 1 } });
+                                worksheet["!merges"] = p != '' ? [...worksheet["!merges"], { s: { r: 3, c: columnLength - 2 }, e: { r: 3, c: columnLength - 1 } }] : worksheet["!merges"];
+                                worksheet["!merges"] = f != '' ? [...worksheet["!merges"], { s: { r: 4, c: columnLength - 2 }, e: { r: 4, c: columnLength - 1 } }] : worksheet["!merges"];
+                                worksheet["!merges"] = groupsParams != '' ? [...worksheet["!merges"], { s: { r: 5, c: columnLength - 2 }, e: { r: 5, c: columnLength - 1 } }] : worksheet["!merges"];
+                                worksheet["!merges"] = setsParams != '' ? [...worksheet["!merges"], { s: { r: 6, c: columnLength - 2 }, e: { r: 6, c: columnLength - 1 } }] : worksheet["!merges"];
 
                                 let obj = {
                                     //index: sheetOrder,
@@ -214,12 +250,12 @@ function processDashboard(dashboard, workbook) {
                                 }
 
                                 worksheetArr.push(obj);
-                                
+
                                 if (sheetCount == checkCount) {
                                     //worksheetArr.sort((a, b) => a.index - b.index);
                                     worksheetArr.forEach((worksheetInfo) => {
                                         //console.log(worksheetInfo.index);
-                                        worksheetInfo.name = worksheetInfo.name.length >=31 ? worksheetInfo.name.substring(0, 30) : worksheetInfo.name;
+                                        worksheetInfo.name = worksheetInfo.name.length >= 31 ? worksheetInfo.name.substring(0, 30) : worksheetInfo.name;
                                         workbook.SheetNames.push(worksheetInfo.name);
                                         workbook.Sheets[worksheetInfo.name] = worksheetInfo.worksheet;
                                     });

@@ -14,7 +14,7 @@ window.onload = function () {
 
             //PROMISE
             Promise.all([processDashboard(dashboard, workbook)]).then((values) => {
-                console.log('in 3rd task - V4');
+                console.log('in 3rd task');
                 // "FORCE DOWNLOAD" XLSX FILE
                 var today = new Date();
                 var date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
@@ -109,7 +109,7 @@ function processDashboard(dashboard, workbook) {
                             await sheet.getSummaryDataAsync().then(function (d) {
                                 let sheetData = d;
                                 checkCount++;
-                                // console.log(sheetData);
+                                console.log(sheetData);
                                 let columnLength = sheetData.columns.length;
                                 let columns = sheetData.columns;
                                 let result = [];
@@ -227,7 +227,7 @@ function processDashboard(dashboard, workbook) {
                                 //CREATE WORKSHEET(S) AND ADD IT TO EXCEL FILE
                                 let worksheet = XLSX.utils.aoa_to_sheet(result);
 
-                                let rowFooterMergeStart = 10 + sheetData.totalRowCount;
+                                let rowFooterMergeStart = 9 + sheetData.totalRowCount;
                                 rowFooterMergeStart = groupsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
                                 rowFooterMergeStart = setsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
 

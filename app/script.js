@@ -14,14 +14,16 @@ window.onload = function () {
 
             //PROMISE
             Promise.all([processDashboard(dashboard, workbook)]).then((values) => {
-                console.log('in 3rd task');
+                console.log('in 3rd task - V5');
                 // "FORCE DOWNLOAD" XLSX FILE
                 var today = new Date();
                 var date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
                 var time = today.getHours() + "_" + today.getMinutes() + "_" + today.getSeconds();
-                var dateTime = date + ' ' + time;
+                // var dateTime = date + ' ' + time;
 
-                XLSX.writeFile(workbook, "Excel-Output _" + dateTime + ".xlsx");
+                var excelFileName = dashboard.name;
+
+                XLSX.writeFile(workbook, excelFileName + ".xlsx");
             });
 
 
@@ -108,27 +110,81 @@ function processDashboard(dashboard, workbook) {
                         if (sheet.name === sheetName) {
                             await sheet.getSummaryDataAsync().then(function (d) {
                                 let sheetData = d;
+                                let totalRowCount = 0;
                                 checkCount++;
-                                console.log(sheetData);
+                                // console.log(sheetData);
                                 let columnLength = sheetData.columns.length;
                                 let columns = sheetData.columns;
+
+                                /* Check whether column as Measure Names and Measure values field.
+                                If present, find the index */
+                                let measureNamesIndex = -1;
+                                let measureValuesIndex = -1;
+
+                                for (let i = 0; i < columnLength; i++) {
+                                    let colEle = columns[i];
+                                    if (colEle.fieldName == 'Measure Names') {
+                                        measureNamesIndex = i;
+                                    } else if (colEle.fieldName == 'Measure Values') {
+                                        measureValuesIndex = i;
+                                    }
+                                }
+
+                                /* If measure names are present, count how much measure names are present */
+                                let colData = sheetData.data;
+                                let measureNames = [];
+                                let mCount = 1;
+
+                                if (measureNamesIndex != -1) {
+                                    let mFlag = false;
+                                    let mIndex = -1;
+                                    for (let i = 0; i < colData.length; i++) {
+                                        let arrEle = colData[i];
+
+                                        if (mIndex == -1) {
+                                            for (let j = 0; j < arrEle.length; j++) {
+                                                if (measureNamesIndex != j || measureValuesIndex != j) {
+                                                    mIndex = j;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (mIndex != -1) {
+                                            if (colData[i][mIndex].value == colData[i + 1][mIndex].value) {
+                                                mCount++;
+                                                measureNames.push(colData[i][measureNamesIndex].formattedValue);
+                                                measureNames.push(colData[i + 1][measureNamesIndex].formattedValue);
+                                            } else {
+                                                break;
+                                            }
+                                        }
+
+
+
+                                    }
+                                }
+
+                                console.log(measureNames);
+                                console.log(mCount)
+
                                 let result = [];
 
                                 let tt = [];
                                 let rr = [];
                                 let empt = [];
-                                let ii = columnLength % 2;
+
+                                columnLength = measureNames.length > 0 ? columnLength - 2 + mCount : columnLength;
 
                                 for (let i = 0; i < columnLength; i++) {
                                     if (i == 0) {
-                                        tt.push({ v: reportHeader, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 22, name: 'Calibri', color: { rgb: 'f1f1f1' } } } });
+                                        tt.push({ v: reportHeader, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 22, name: 'Calibri', color: { rgb: 'f1f1f1' } } } });
                                     } else {
-                                        tt.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 22, name: 'Calibri', color: { rgb: 'f1f1f1' } } } });
+                                        tt.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 22, name: 'Calibri', color: { rgb: 'f1f1f1' } } } });
                                     }
                                     if (i == columnLength - 2) {
-                                        rr.push({ v: `Report executed by ${user} ${reportRefreshTime}`, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
+                                        rr.push({ v: `Report executed by ${user} ${reportRefreshTime}`, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
                                     } else {
-                                        rr.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
+                                        rr.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
                                     }
                                     empt.push(" ");
                                 }
@@ -189,26 +245,73 @@ function processDashboard(dashboard, workbook) {
                                 result.push(empt);
 
                                 tt = [];
-                                for (let i = 0; i < columnLength; i++) {
-                                    let colEle = columns[i];
-                                    tt.push({ v: colEle.fieldName.startsWith('SUM(') && colEle.fieldName.endsWith(')') ? colEle.fieldName.substring(3, colEle.fieldName.length-1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                if (measureNames.length > 0) {
+                                    for (let i = 0; i < columnLength; i++) {
+                                        if ((i != measureNamesIndex) && (i != measureValuesIndex)) {
+                                            // console.log(`i: ${i}, measureNamesIndex: ${measureNamesIndex}, measureNamesIndex: ${measureNamesIndex}`);
+                                            let colEle = columns[i];
+                                            tt.push({ v: ((colEle.fieldName.startsWith('SUM(') || colEle.fieldName.startsWith('AGG(') || colEle.fieldName.startsWith('ATTR(')) && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(4, colEle.fieldName.length - 1) : (colEle.fieldName.startsWith('ATTR(') && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(5, colEle.fieldName.length - 1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                        }
+                                    }
+                                    for (let i = 0; i < measureNames.length; i++) {
+                                        // console.log(measureNames[i]);
+                                        tt.push({ v: measureNames[i], t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                    }
+                                } else {
+                                    for (let i = 0; i < columnLength; i++) {
+                                        let colEle = columns[i];
+                                        tt.push({ v: ((colEle.fieldName.startsWith('SUM(') || colEle.fieldName.startsWith('AGG(')) && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(4, colEle.fieldName.length - 1) : (colEle.fieldName.startsWith('ATTR(') && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(5, colEle.fieldName.length - 1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                    }
                                 }
-
+                                
                                 result.push(tt);
 
-                                let colData = sheetData.data;
-                                for (let i = 0; i < colData.length; i++) {
-                                    let arrEle = colData[i];
+                                if (measureNames.length > 0) {
+                                    let lCount = mCount;
+                                    let tempDict = {};
                                     let tempArr = [];
-                                    let isDataString = false;
-                                    for (let j = 0; j < arrEle.length; j++) {
-                                        if (j == 0) {
-                                            isDataString = colData.some((ee) => (isNaN(ee[0].value) && (ee[0].value != '%null%')));
-                                            console.log(isDataString);
+                                    for (let i = 0; i < colData.length; i++) {
+                                        let arrEle = colData[i];
+                                        
+                                        if (lCount != 0) {
+                                            for (let j = 0; j < arrEle.length; j++) {
+                                                if ((j != measureNamesIndex) && (j != measureValuesIndex) && (lCount == mCount)) {
+                                                    tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
+                                                }
+                                            }
+                                            tempDict[arrEle[measureNamesIndex].formattedValue] = arrEle[measureValuesIndex].value;
+                                            lCount--;
                                         }
-                                        tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
+
+                                        if (lCount == 0) {
+                                            for (let j = 0; j < measureNames.length; j++) {
+                                                let tempData = tempDict[measureNames[j]];
+                                                tempArr.push({ v: tempData == '%null%' ? 'Null' : tempData, t: isNaN(tempData) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(tempData) ? { horizontal: 'left' } : { horizontal: 'right' } } });
+                                            }
+                                            
+                                            result.push(tempArr);
+                                            totalRowCount++;
+                                            tempArr = [];
+                                            tempDict = {};
+                                            lCount = mCount;
+                                        }
+
                                     }
-                                    result.push(tempArr);
+                                } else {
+                                    for (let i = 0; i < colData.length; i++) {
+                                        let arrEle = colData[i];
+                                        let tempArr = [];
+                                        // let isDataString = false;
+                                        for (let j = 0; j < arrEle.length; j++) {
+                                            // if (j == 0) {
+                                            //     isDataString = colData.some((ee) => (isNaN(ee[0].value) && (ee[0].value != '%null%')));
+                                                // console.log(isDataString);
+                                            // }
+                                            tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
+                                        }
+                                        result.push(tempArr);
+                                        totalRowCount++;
+                                    }
                                 }
 
                                 tt = [];
@@ -227,9 +330,11 @@ function processDashboard(dashboard, workbook) {
                                 //CREATE WORKSHEET(S) AND ADD IT TO EXCEL FILE
                                 let worksheet = XLSX.utils.aoa_to_sheet(result);
 
-                                let rowFooterMergeStart = 9 + sheetData.totalRowCount;
+                                let rowFooterMergeStart = 8 + totalRowCount;
                                 rowFooterMergeStart = groupsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
                                 rowFooterMergeStart = setsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
+                                rowFooterMergeStart = p != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
+                                rowFooterMergeStart = f != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
 
                                 worksheet['!cols'] = fitToColumn(result);
                                 worksheet['!rows'] = [{ 'hpt': 40 }];

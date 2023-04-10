@@ -49,6 +49,12 @@ function getIncludedArr(arr, name) {
     return arr.filter(x => x.fieldName.includes(name)).map(x => x.fieldName);
 }
 
+//returns an array by removing duplicate elements
+function removeDuplicates(arr) {
+    return arr.filter((item,
+        index) => arr.indexOf(item) === index);
+}
+
 function processDashboard(dashboard, workbook) {
     //DECLARE REQUIRED OBJECTS FOR STYLEJS
     const DEF_Size14Vert = { font: { sz: 24 }, alignment: { vertical: 'center', horizontal: 'center' } };
@@ -112,7 +118,7 @@ function processDashboard(dashboard, workbook) {
                                 let sheetData = d;
                                 let totalRowCount = 0;
                                 checkCount++;
-                                // console.log(sheetData);
+                                console.log(sheetData);
                                 let columnLength = sheetData.columns.length;
                                 let columns = sheetData.columns;
 
@@ -164,6 +170,8 @@ function processDashboard(dashboard, workbook) {
                                     }
                                 }
 
+                                measureNames = removeDuplicates(measureNames);
+
                                 console.log(measureNames);
                                 console.log(mCount)
 
@@ -173,6 +181,7 @@ function processDashboard(dashboard, workbook) {
                                 let rr = [];
                                 let empt = [];
 
+                                let actualColumnLength = columnLength;
                                 columnLength = measureNames.length > 0 ? columnLength - 2 + mCount : columnLength;
 
                                 for (let i = 0; i < columnLength; i++) {
@@ -246,10 +255,11 @@ function processDashboard(dashboard, workbook) {
 
                                 tt = [];
                                 if (measureNames.length > 0) {
-                                    for (let i = 0; i < columnLength; i++) {
+                                    for (let i = 0; i < actualColumnLength; i++) {
                                         if ((i != measureNamesIndex) && (i != measureValuesIndex)) {
                                             // console.log(`i: ${i}, measureNamesIndex: ${measureNamesIndex}, measureNamesIndex: ${measureNamesIndex}`);
                                             let colEle = columns[i];
+                                            
                                             tt.push({ v: ((colEle.fieldName.startsWith('SUM(') || colEle.fieldName.startsWith('AGG(') || colEle.fieldName.startsWith('ATTR(')) && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(4, colEle.fieldName.length - 1) : (colEle.fieldName.startsWith('ATTR(') && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(5, colEle.fieldName.length - 1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
                                         }
                                     }

@@ -4,7 +4,7 @@
        <default-locale>en_US</default-locale>
        <name resource-id="name"/>
        <description>Extension Description</description>
-       <author name="USERNAME" email="USER@example.com" organization="MyCo" website="https://www.example.com"/>
+       <author name="LTIMindtree" email="USER@example.com" organization="LTIMindtree" website="https://www.ltimindtree.com/"/>
        <min-api-version>1.0</min-api-version>
        <source-location>
          <url>https://172.19.161.53:8443/app/index.html</url>
@@ -15,9 +15,9 @@
      </dashboard-extension>
      <resources>
        <resource id="name">
-         <text locale="en_US">Sunburst</text>
-         <text locale="fr_BE">Sunburst</text>
-         <text locale="de_DE">Sunburst</text>
+         <text locale="en_US">ExcelExport</text>
+         <text locale="fr_BE">ExcelExport</text>
+         <text locale="de_DE">ExcelExport</text>
        </resource>
      </resources>
    </manifest>

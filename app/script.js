@@ -387,7 +387,7 @@ function processDashboard(dashboard, workbook) {
                                         let tempArr = [];
                                         for (let j = 0; j < arrEle.length; j++) {
                                             if ((j != slNoIndex) && (j != emptyColIndex)) {
-                                                tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].formattedValue, t: definedExcelDataTypeMap?.[columnDataTypeMap[i]] ? definedExcelDataTypeMap?.[columnDataTypeMap[i]] : isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
+                                                tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].formattedValue, t: definedExcelDataTypeMap?.[columnDataTypeMap[j]] ? definedExcelDataTypeMap?.[columnDataTypeMap[j]] : isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
                                             }
                                         }
                                         result.push(tempArr);

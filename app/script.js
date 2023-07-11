@@ -6,10 +6,9 @@
 'use strict';
 
 window.onload = function () {
-
     //FUNCTION RUNS ON BUTTON CLICK
     document.getElementById("demo").onclick = () => {
-
+        
         //TABLEAU EXTENSION API
         tableau.extensions.initializeAsync().then(function () {
             let dashboard = tableau.extensions.dashboardContent.dashboard;
@@ -62,6 +61,13 @@ function removeDuplicates(arr) {
         index) => arr.indexOf(item) === index);
 }
 
+//find whether object with specific value is present in array of objects
+function getIndexUsingStartsWith(arr, name) {
+    const { length } = arr;
+    const id = length + 1;
+    return arr.findIndex(el => el.fieldName.startsWith(name));
+}
+
 function processDashboard(dashboard, workbook) {
     //DECLARE REQUIRED OBJECTS FOR STYLEJS
     const DEF_Size14Vert = { font: { sz: 24 }, alignment: { vertical: 'center', horizontal: 'center' } };
@@ -70,16 +76,40 @@ function processDashboard(dashboard, workbook) {
 
     return new Promise(async function (resolve, reject) {
         let arr = dashboard.worksheets;
+
         let worksheetArr = [];
 
-        let sheetCount = arr.reduce((accumulator, obj) => {
+        let checkCount = 0;
+
+        let dashboardFilters = [];
+
+        for (let object of dashboard.objects) {
+            if (object.type === 'quick-filter')
+                dashboardFilters.push(object.name);
+        }
+
+        console.log(dashboardFilters);
+
+        let worksheetsToBeExtracted = arr.reduce((accumulator, obj) => {
             if (obj.name.includes('Report_Export_Details_D')) {
                 return accumulator + 1;
             }
             return accumulator;
         }, 0);
 
-        let checkCount = 0;
+        let sheetName = '';
+        let reportHeader = '';
+        let reportRefreshTime = '';
+        let reportFooter = '';
+        let user = '';
+        let groupsParams = '';
+        let setsParams = '';
+        let p = '';
+        let f = '';
+        let result = [];
+        let totalRowCount = 0;
+        let columnLength = 0;
+        let filtersCounter = 0;
 
         await dashboard.worksheets.forEach(async function (worksheet, key, arr) {
             if (worksheet.name.includes('Report_Export_Details_D')) {
@@ -88,70 +118,42 @@ function processDashboard(dashboard, workbook) {
                     let dashboardData = mydata.data;
                     let dashboardColumns = mydata.columns;
 
-                    let sheetName = '';
-                    if (getIndex(dashboardColumns, 'Sheet name') != -1) {
-                        sheetName = dashboardData[0][getIndex(dashboardColumns, 'Sheet name')].value;
-                    } else {
-                        alert(`'Sheet Name' is a required field in Report_Export_Details_Master & Corresponding Dashboard Related Sheet!`);
-                        resolve('error');
-                        return;
+                    if (getIndexUsingStartsWith(dashboardColumns, 'Sheet name') != -1) {
+                        sheetName = dashboardData[0][getIndexUsingStartsWith(dashboardColumns, 'Sheet name')].value;
                     }
 
-                    let reportHeader = '';
-                    if (getIndex(dashboardColumns, 'Report Header') != -1) {
-                        reportHeader = dashboardData[0][getIndex(dashboardColumns, 'Report Header')].value;
-                    } else {
-                        alert(`'Report Header' is a required field in Report_Export_Details_Master & Corresponding Dashboard Related Sheet!`);
-                        resolve('error');
-                        return;
+                    if (getIndexUsingStartsWith(dashboardColumns, 'Report Header') != -1) {
+                        reportHeader = dashboardData[0][getIndexUsingStartsWith(dashboardColumns, 'Report Header')].value;
                     }
 
-                    let reportRefreshTime = '';
                     if (getIndex(dashboardColumns, 'Report Refresh Time') != -1) {
                         reportRefreshTime = dashboardData[0][getIndex(dashboardColumns, 'Report Refresh Time')].value;
-                    } else {
-                        alert(`'Report Refresh Time' is a required field in Report_Export_Details_Master & Corresponding Dashboard Related Sheet!`);
-                        resolve('error');
-                        return;
                     }
 
-                    let reportFooter = '';
-                    if (getIndex(dashboardColumns, 'Report Footer') != -1) {
-                        reportFooter = dashboardData[0][getIndex(dashboardColumns, 'Report Footer')].value;
-                    } else {
-                        alert(`'Report Footer' is a required field in Report_Export_Details_Master & Corresponding Dashboard Related Sheet!`);
-                        resolve('error');
-                        return;
+                    if (getIndexUsingStartsWith(dashboardColumns, 'Report Footer') != -1) {
+                        reportFooter = dashboardData[0][getIndexUsingStartsWith(dashboardColumns, 'Report Footer')].value;
                     }
 
-                    let user = '';
                     if (getIndex(dashboardColumns, 'User') != -1) {
                         user = dashboardData[0][getIndex(dashboardColumns, 'User')].value;
-                    } else {
-                        alert(`'User' is a required field in Report_Export_Details_Master & Corresponding Dashboard Related Sheet!`);
-                        resolve('error');
-                        return;
                     }
 
                     //let sheetOrder = dashboardData[0][getIndex(dashboardColumns, 'Sheet order')].value;
 
-                    let groupsParams = '';
+
                     if (getIndex(dashboardColumns, 'Groups Parameter') != -1) {
                         groupsParams = dashboardData[0][getIndex(dashboardColumns, 'Groups Parameter')].value;
                     }
 
-                    let setsParams = '';
                     if (getIndex(dashboardColumns, 'Sets Parameter') != -1) {
                         setsParams = dashboardData[0][getIndex(dashboardColumns, 'Sets Parameter')].value;
                     }
 
-                    let p = '';
                     let paramsArr = getIncludedArr(dashboardColumns, 'Param');
                     paramsArr.forEach(param => {
                         p += dashboardData[0][getIndex(dashboardColumns, param)].value + ';  ';
                     });
 
-                    let f = '';
                     let filtersArr = getIncludedArr(dashboardColumns, 'Filter');
                     filtersArr.forEach(filter => {
                         f += dashboardData[0][getIndex(dashboardColumns, filter)].value + ';  ';
@@ -159,292 +161,390 @@ function processDashboard(dashboard, workbook) {
 
                     await dashboard.worksheets.forEach(async function (sheet) {
                         if (sheet.name === sheetName) {
-                            await sheet.getSummaryDataAsync().then(function (d) {
-                                let sheetData = d;
-                                let totalRowCount = 0;
-                                checkCount++;
-                                // console.log(sheetData);
-                                let columnLength = sheetData.columns.length;
-                                let columns = sheetData.columns;
-                                let slNoIndex = -1;
-                                let emptyColIndex = -1;
+                            let filters = [];
 
-                                /* Excel data type map */
-                                let definedExcelDataTypeMap = {
-                                    'string': 's',
-                                    'date': 'd',
-                                    'int': 'n',
-                                    'float': 'n'
-                                };
-
-                                let columnDataTypeMap = {};
-
-                                /* Check whether column as Measure Names and Measure values field.
-                                If present, find the index */
-                                let measureNamesIndex = -1;
-                                let measureValuesIndex = -1;
-
-                                for (let i = 0; i < columnLength; i++) {
-                                    let colEle = columns[i];
-                                    if (colEle.fieldName === 'Measure Names') {
-                                        measureNamesIndex = i;
-                                    } else if (colEle.fieldName === 'Measure Values') {
-                                        measureValuesIndex = i;
+                            await sheet.getFiltersAsync().then(async function (mydata) {
+                                let rawFilters = mydata;
+                                console.log(sheet.name);
+                                console.log(rawFilters);
+                                if (rawFilters.length > 0) {
+                                    for (let rawFilter of rawFilters) {
+                                        if (dashboardFilters.includes(rawFilter.fieldName)) {
+                                            let appliedValues = rawFilter.appliedValues || [];
+                                            let rawValues = [];
+                                            if (appliedValues.length > 0) {
+                                                for (let appliedValue of appliedValues) {
+                                                    rawValues.push(appliedValue.formattedValue);
+                                                }
+                                            }
+                                            let tempObj = {
+                                                'fieldName': rawFilter.fieldName,
+                                                'filterValues': rawValues
+                                            }
+                                            filtersCounter++;
+                                            filters.push(tempObj);
+                                        }
                                     }
-
-                                    /* Get Sl_No index */
-                                    if (colEle.fieldName === 'AGG(Sl_No)') {
-                                        slNoIndex = i;
-                                    }
-
-                                    /* Get the empty column index */
-                                    if (colEle.fieldName.trim() === "' '") {
-                                        emptyColIndex = i;
-                                    }
-
-                                    /* Get the data type of each column and populate into map */
-                                    columnDataTypeMap[i] = colEle.dataType;
                                 }
+                            });
+                            await sheet.getSummaryDataAsync().then(async function (d) {
+                                if (checkCount == 0) {
+                                    let sheetData = d;
 
-                                /* If measure names are present, count how much measure names are present */
-                                let colData = sheetData.data;
-                                let measureNames = [];
-                                let mCount = 1;
+                                    // console.log(sheet.name);
+                                    // console.log(filters);
 
-                                if (measureNamesIndex != -1) {
-                                    // let mFlag = false;
-                                    let mIndex = -1;
-                                    for (let i = 0; i < colData.length; i++) {
-                                        let arrEle = colData[i];
+                                    checkCount++;
+                                    // console.log(sheetData);
+                                    columnLength = sheetData.columns.length;
+                                    let columns = sheetData.columns;
+                                    let slNoIndex = -1;
+                                    let emptyColIndex = -1;
 
-                                        if (mIndex == -1) {
-                                            for (let j = 0; j < arrEle.length; j++) {
-                                                if (measureNamesIndex != j || measureValuesIndex != j) {
-                                                    mIndex = j;
+                                    /* Excel data type map */
+                                    let definedExcelDataTypeMap = {
+                                        'string': 's',
+                                        'date': 'd',
+                                        'int': 'n',
+                                        'float': 'n',
+                                        'date-time': 'd'
+                                    };
+
+                                    let columnDataTypeMap = {};
+
+                                    /* Check whether column as Measure Names and Measure values field.
+                                    If present, find the index */
+                                    let measureNamesIndex = -1;
+                                    let measureValuesIndex = -1;
+
+                                    for (let i = 0; i < columnLength; i++) {
+                                        let colEle = columns[i];
+                                        if (colEle.fieldName === 'Measure Names') {
+                                            measureNamesIndex = i;
+                                        } else if (colEle.fieldName === 'Measure Values') {
+                                            measureValuesIndex = i;
+                                        }
+
+                                        /* Get Sl_No index */
+                                        if (colEle.fieldName === 'AGG(Sl_No)') {
+                                            slNoIndex = i;
+                                        }
+
+                                        /* Get the empty column index */
+                                        if (colEle.fieldName.trim() === "' '") {
+                                            emptyColIndex = i;
+                                        }
+
+                                        /* Get the data type of each column and populate into map */
+                                        columnDataTypeMap[i] = colEle.dataType;
+                                    }
+
+                                    /* If measure names are present, count how much measure names are present */
+                                    let colData = sheetData.data;
+                                    let measureNames = [];
+                                    let mCount = 1;
+
+                                    if (measureNamesIndex != -1) {
+                                        // let mFlag = false;
+                                        let mIndex = -1;
+                                        for (let i = 0; i < colData.length; i++) {
+                                            let arrEle = colData[i];
+
+                                            if (mIndex == -1) {
+                                                for (let j = 0; j < arrEle.length; j++) {
+                                                    if (measureNamesIndex != j || measureValuesIndex != j) {
+                                                        mIndex = j;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if (mIndex != -1) {
+                                                if (colData[i]?.[mIndex].value === colData[i + 1]?.[mIndex].value) {
+                                                    // mCount++;
+                                                    measureNames.push(colData[i][measureNamesIndex].formattedValue);
+                                                    measureNames.push(colData[i + 1][measureNamesIndex].formattedValue);
+                                                } else {
                                                     break;
                                                 }
                                             }
+
                                         }
-                                        if (mIndex != -1) {
-                                            if (colData[i][mIndex].value == colData[i + 1][mIndex].value) {
-                                                // mCount++;
-                                                measureNames.push(colData[i][measureNamesIndex].formattedValue);
-                                                measureNames.push(colData[i + 1][measureNamesIndex].formattedValue);
+                                    }
+
+                                    measureNames = removeDuplicates(measureNames);
+                                    mCount = measureNames.length;
+
+                                    console.log(measureNames);
+                                    console.log(mCount);
+
+                                    let tt = [];
+                                    let rr = [];
+                                    let empt = [];
+
+                                    let actualColumnLength = columnLength;
+                                    columnLength = measureNames.length > 0 ? columnLength - 2 + mCount : columnLength;
+                                    columnLength = slNoIndex == -1 ? columnLength : columnLength - 1;
+                                    columnLength = emptyColIndex == -1 ? columnLength : columnLength - 1;
+
+                                    for (let i = 0; i < columnLength; i++) {
+                                        if (i == 0) {
+                                            tt.push({ v: reportHeader, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 14, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'left', vertical: 'center' } } });
+                                        } else {
+                                            tt.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 22, name: 'Calibri', color: { rgb: 'f1f1f1' } } } });
+                                        }
+                                        if (i == 0) {
+                                            rr.push({ v: `Report executed by ${user} ${reportRefreshTime}`, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'left' } } });
+                                        } else {
+                                            rr.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
+                                        }
+                                        empt.push(" ");
+                                    }
+
+                                    result.push(tt);
+                                    result.push(empt);
+                                    result.push(rr);
+
+                                    if (filters.length > 0) {
+                                        for (let filter of filters) {
+                                            tt = [];
+                                            for (let i = 0; i < columnLength; i++) {
+                                                if (i == 0)
+                                                    tt.push({ v: filter.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                                else if (i == 1)
+                                                    tt.push({ v: filter.filterValues, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                                else
+                                                    tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                            }
+                                            result.push(tt);
+                                        }
+                                    }
+
+                                    if (p != '') {
+                                        tt = [];
+                                        for (let i = 0; i < columnLength; i++) {
+                                            if (i == columnLength - 2) {
+                                                tt.push({ v: p, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
                                             } else {
-                                                break;
+                                                tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
                                             }
                                         }
-
-
-
+                                        result.push(tt);
                                     }
-                                }
 
-                                measureNames = removeDuplicates(measureNames);
-                                mCount = measureNames.length;
+                                    if (f != '') {
+                                        tt = [];
+                                        for (let i = 0; i < columnLength; i++) {
+                                            if (i == columnLength - 2) {
+                                                tt.push({ v: f, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                            } else {
+                                                tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                            }
+                                        }
+                                        result.push(tt);
+                                    }
 
-                                // console.log(measureNames);
-                                // console.log(mCount)
+                                    if (groupsParams != '') {
+                                        tt = [];
+                                        for (let i = 0; i < columnLength; i++) {
+                                            if (i == columnLength - 2) {
+                                                tt.push({ v: groupsParams, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                            } else {
+                                                tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                            }
+                                        }
+                                        result.push(tt);
+                                    }
 
-                                let result = [];
+                                    if (setsParams != '') {
+                                        tt = [];
+                                        for (let i = 0; i < columnLength; i++) {
+                                            if (i == columnLength - 2) {
+                                                tt.push({ v: setsParams, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                            } else {
+                                                tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
+                                            }
+                                        }
+                                        result.push(tt);
+                                    }
 
-                                let tt = [];
-                                let rr = [];
-                                let empt = [];
+                                    result.push(empt);
+                                    result.push(empt);
 
-                                let actualColumnLength = columnLength;
-                                columnLength = measureNames.length > 0 ? columnLength - 2 + mCount : columnLength;
-                                columnLength = slNoIndex == -1 ? columnLength : columnLength - 1;
-                                columnLength = emptyColIndex == -1 ? columnLength : columnLength - 1;
+                                    tt = [];
+                                    if (measureNames.length > 0) {
+                                        for (let i = 0; i < actualColumnLength; i++) {
+                                            if ((i != measureNamesIndex) && (i != measureValuesIndex) && (i != slNoIndex) && (i != emptyColIndex)) {
+                                                let colEle = columns[i];
 
-                                for (let i = 0; i < columnLength; i++) {
-                                    if (i == 0) {
-                                        tt.push({ v: reportHeader, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 14, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'left', vertical: 'center' } } });
+                                                tt.push({ v: ((colEle.fieldName.startsWith('SUM(') || colEle.fieldName.startsWith('AGG(') || colEle.fieldName.startsWith('ATTR(')) && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(4, colEle.fieldName.length - 1) : (colEle.fieldName.startsWith('ATTR(') && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(5, colEle.fieldName.length - 1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                            }
+                                        }
+                                        for (let i = 0; i < measureNames.length; i++) {
+                                            tt.push({ v: measureNames[i], t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                        }
                                     } else {
-                                        tt.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 22, name: 'Calibri', color: { rgb: 'f1f1f1' } } } });
-                                    }
-                                    if (i == 0) {
-                                        rr.push({ v: `Report executed by ${user} ${reportRefreshTime}`, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'left' } } });
-                                    } else {
-                                        rr.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '538DD5' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { horizontal: 'right' } } });
-                                    }
-                                    empt.push(" ");
-                                }
-
-                                result.push(tt);
-                                result.push(empt);
-                                result.push(rr);
-
-                                if (p != '') {
-                                    tt = [];
-                                    for (let i = 0; i < columnLength; i++) {
-                                        if (i == columnLength - 2) {
-                                            tt.push({ v: p, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                        } else {
-                                            tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                        }
-                                    }
-                                    result.push(tt);
-                                }
-
-                                if (f != '') {
-                                    tt = [];
-                                    for (let i = 0; i < columnLength; i++) {
-                                        if (i == columnLength - 2) {
-                                            tt.push({ v: f, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                        } else {
-                                            tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                        }
-                                    }
-                                    result.push(tt);
-                                }
-
-                                if (groupsParams != '') {
-                                    tt = [];
-                                    for (let i = 0; i < columnLength; i++) {
-                                        if (i == columnLength - 2) {
-                                            tt.push({ v: groupsParams, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                        } else {
-                                            tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                        }
-                                    }
-                                    result.push(tt);
-                                }
-
-                                if (setsParams != '') {
-                                    tt = [];
-                                    for (let i = 0; i < columnLength; i++) {
-                                        if (i == columnLength - 2) {
-                                            tt.push({ v: setsParams, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                        } else {
-                                            tt.push({ v: '', t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'right' } } });
-                                        }
-                                    }
-                                    result.push(tt);
-                                }
-
-                                result.push(empt);
-                                result.push(empt);
-
-                                tt = [];
-                                if (measureNames.length > 0) {
-                                    for (let i = 0; i < actualColumnLength; i++) {
-                                        if ((i != measureNamesIndex) && (i != measureValuesIndex) && (i != slNoIndex) && (i != emptyColIndex)) {
+                                        for (let i = 0; i < columnLength; i++) {
                                             let colEle = columns[i];
 
-                                            tt.push({ v: ((colEle.fieldName.startsWith('SUM(') || colEle.fieldName.startsWith('AGG(') || colEle.fieldName.startsWith('ATTR(')) && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(4, colEle.fieldName.length - 1) : (colEle.fieldName.startsWith('ATTR(') && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(5, colEle.fieldName.length - 1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                            if ((i != slNoIndex) && (i != i != emptyColIndex)) {
+                                                tt.push({ v: ((colEle.fieldName.startsWith('SUM(') || colEle.fieldName.startsWith('AGG(')) && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(4, colEle.fieldName.length - 1) : (colEle.fieldName.startsWith('ATTR(') && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(5, colEle.fieldName.length - 1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                            }
                                         }
                                     }
-                                    for (let i = 0; i < measureNames.length; i++) {
-                                        tt.push({ v: measureNames[i], t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
-                                    }
-                                } else {
-                                    for (let i = 0; i < columnLength; i++) {
-                                        let colEle = columns[i];
 
-                                        if ((i != slNoIndex) && (i != i != emptyColIndex)) {
-                                            tt.push({ v: ((colEle.fieldName.startsWith('SUM(') || colEle.fieldName.startsWith('AGG(')) && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(4, colEle.fieldName.length - 1) : (colEle.fieldName.startsWith('ATTR(') && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(5, colEle.fieldName.length - 1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                    result.push(tt);
+
+                                    if (measureNames.length > 0) {
+                                        let lCount = mCount;
+                                        let tempDict = {};
+                                        let tempArr = [];
+                                        for (let i = 0; i < colData.length; i++) {
+                                            let arrEle = colData[i];
+
+                                            if (lCount != 0) {
+                                                for (let j = 0; j < arrEle.length; j++) {
+                                                    if ((j != measureNamesIndex) && (j != measureValuesIndex) && (j != slNoIndex) && (j != emptyColIndex) && (lCount == mCount)) {
+                                                        tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : columnDataTypeMap[j] === 'date' || columnDataTypeMap[j] === 'date-time' ? arrEle[j].formattedValue.substring(0, arrEle[j].formattedValue.indexOf(" ") === -1 ? arrEle[j].formattedValue.length : arrEle[j].formattedValue.indexOf(" ")) : arrEle[j].value, t: definedExcelDataTypeMap?.[columnDataTypeMap[j]] ? definedExcelDataTypeMap?.[columnDataTypeMap[j]] : isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
+                                                    }
+                                                }
+                                                tempDict[arrEle[measureNamesIndex].formattedValue] = arrEle[measureValuesIndex].value;
+                                                lCount--;
+                                            }
+
+                                            if (lCount == 0) {
+                                                for (let j = 0; j < measureNames.length; j++) {
+                                                    let tempData = tempDict[measureNames[j]];
+                                                    tempArr.push({ v: tempData == '%null%' ? 'Null' : tempData, t: isNaN(tempData) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(tempData) ? { horizontal: 'left' } : { horizontal: 'right' } } });
+                                                }
+
+                                                result.push(tempArr);
+                                                totalRowCount++;
+                                                tempArr = [];
+                                                tempDict = {};
+                                                lCount = mCount;
+                                            }
+
                                         }
-                                    }
-                                }
-
-                                result.push(tt);
-
-                                if (measureNames.length > 0) {
-                                    let lCount = mCount;
-                                    let tempDict = {};
-                                    let tempArr = [];
-                                    for (let i = 0; i < colData.length; i++) {
-                                        let arrEle = colData[i];
-
-                                        if (lCount != 0) {
+                                    } else {
+                                        for (let i = 0; i < colData.length; i++) {
+                                            let arrEle = colData[i];
+                                            let tempArr = [];
                                             for (let j = 0; j < arrEle.length; j++) {
-                                                if ((j != measureNamesIndex) && (j != measureValuesIndex) && (j != slNoIndex) && (j != emptyColIndex) && (lCount == mCount)) {
-                                                    tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : columnDataTypeMap[j] === 'date' ? arrEle[j].formattedValue : arrEle[j].value, t: definedExcelDataTypeMap?.[columnDataTypeMap[j]] ? definedExcelDataTypeMap?.[columnDataTypeMap[j]] : isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
+                                                if ((j != slNoIndex) && (j != emptyColIndex)) {
+                                                    tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: definedExcelDataTypeMap?.[columnDataTypeMap[j]] ? definedExcelDataTypeMap?.[columnDataTypeMap[j]] : isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
                                                 }
                                             }
-                                            tempDict[arrEle[measureNamesIndex].formattedValue] = arrEle[measureValuesIndex].value;
-                                            lCount--;
-                                        }
-
-                                        if (lCount == 0) {
-                                            for (let j = 0; j < measureNames.length; j++) {
-                                                let tempData = tempDict[measureNames[j]];
-                                                tempArr.push({ v: tempData == '%null%' ? 'Null' : tempData, t: isNaN(tempData) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(tempData) ? { horizontal: 'left' } : { horizontal: 'right' } } });
-                                            }
-
                                             result.push(tempArr);
                                             totalRowCount++;
-                                            tempArr = [];
-                                            tempDict = {};
-                                            lCount = mCount;
                                         }
-
                                     }
                                 } else {
+                                    let sheetData = d;
+
+                                    checkCount++;
+                                    console.log(sheetData);
+                                    let sheetColumnLength = sheetData.columns.length;
+                                    let columns = sheetData.columns;
+
+                                    /* Excel data type map */
+                                    let definedExcelDataTypeMap = {
+                                        'string': 's',
+                                        'date': 'd',
+                                        'int': 'n',
+                                        'float': 'n',
+                                        'date-time': 'd'
+                                    };
+
+                                    let columnDataTypeMap = {};
+
+                                    for (let i = 0; i < sheetColumnLength; i++) {
+                                        let colEle = columns[i];
+
+                                        /* Get the data type of each column and populate into map */
+                                        columnDataTypeMap[i] = colEle.dataType;
+                                    }
+
+                                    let colData = sheetData.data;
+
+                                    let empt = [];
+                                    let tt = [];
+
+                                    for (let i = 0; i < sheetColumnLength; i++) {
+                                        empt.push(" ");
+                                    }
+
+                                    result.push(empt);
+
+                                    // for (let i = 0; i < sheetColumnLength; i++) {
+                                    //     let colEle = columns[i];
+                                    //     tt.push({ v: ((colEle.fieldName.startsWith('SUM(') || colEle.fieldName.startsWith('AGG(')) && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(4, colEle.fieldName.length - 1) : (colEle.fieldName.startsWith('ATTR(') && colEle.fieldName.endsWith(')')) ? colEle.fieldName.substring(5, colEle.fieldName.length - 1) : colEle.fieldName, t: 's', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, font: { sz: 11, name: 'Calibri', bold: true }, alignment: { horizontal: 'left' } } });
+                                    // }
+
+                                    // result.push(tt);
+
                                     for (let i = 0; i < colData.length; i++) {
                                         let arrEle = colData[i];
                                         let tempArr = [];
                                         for (let j = 0; j < arrEle.length; j++) {
-                                            if ((j != slNoIndex) && (j != emptyColIndex)) {
-                                                tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].formattedValue, t: definedExcelDataTypeMap?.[columnDataTypeMap[j]] ? definedExcelDataTypeMap?.[columnDataTypeMap[j]] : isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
-                                            }
+                                            tempArr.push({ v: arrEle[j].value == '%null%' ? 'Null' : arrEle[j].value, t: definedExcelDataTypeMap?.[columnDataTypeMap[j]] ? definedExcelDataTypeMap?.[columnDataTypeMap[j]] : isNaN(arrEle[j].value) ? 's' : 'n', s: { ...DEF_FxSz14RgbVert, border: { right: { style: 'thin', color: { rgb: '000000' } }, left: { style: 'thin', color: { rgb: '000000' } }, bottom: { style: 'thin', color: { rgb: '000000' } }, top: { style: 'thin', color: { rgb: '000000' } } }, alignment: isNaN(arrEle[j].value) ? { horizontal: 'left' } : { horizontal: 'right' } } });
+
                                         }
                                         result.push(tempArr);
                                         totalRowCount++;
                                     }
+
                                 }
 
-                                tt = [];
-                                for (let i = 0; i < columnLength; i++) {
-                                    if (i == 0) {
-                                        tt.push({ v: reportFooter, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { vertical: 'center', horizontal: 'left' } } });
-                                    } else {
-                                        tt.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { vertical: 'bottom', horizontal: 'center' } } });
+                                if (checkCount == worksheetsToBeExtracted) {
+                                    let tt = [];
+                                    let empt = [];
+                                    for (let i = 0; i < columnLength; i++) {
+                                        if (i == 0) {
+                                            tt.push({ v: reportFooter, t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { vertical: 'center', horizontal: 'left' } } });
+                                        } else {
+                                            tt.push({ v: ' ', t: 's', s: { ...DEF_Size14Vert, fill: { fgColor: { rgb: '404040' } }, font: { sz: 11, name: 'Calibri', color: { rgb: 'f1f1f1' } }, alignment: { vertical: 'bottom', horizontal: 'center' } } });
+                                        }
+                                        empt.push(" ");
                                     }
-                                }
 
-                                result.push(empt);
-                                result.push(empt);
-                                result.push(tt);
+                                    if (worksheetsToBeExtracted === 1) {
+                                        result.push(empt);
+                                    }
+                                    result.push(empt);
+                                    result.push(tt);
 
-                                //CREATE WORKSHEET(S) AND ADD IT TO EXCEL FILE
-                                let worksheet = XLSX.utils.aoa_to_sheet(result);
+                                    //CREATE WORKSHEET(S) AND ADD IT TO EXCEL FILE
+                                    let worksheet = XLSX.utils.aoa_to_sheet(result);
 
-                                let rowFooterMergeStart = 8 + totalRowCount;
-                                rowFooterMergeStart = groupsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
-                                rowFooterMergeStart = setsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
-                                rowFooterMergeStart = p != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
-                                rowFooterMergeStart = f != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
+                                    let rowFooterMergeStart = 8 + totalRowCount;
+                                    rowFooterMergeStart = groupsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
+                                    rowFooterMergeStart = setsParams != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
+                                    rowFooterMergeStart = p != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
+                                    rowFooterMergeStart = f != '' ? rowFooterMergeStart + 1 : rowFooterMergeStart;
+                                    rowFooterMergeStart = filtersCounter !== 0 ? rowFooterMergeStart + filtersCounter : rowFooterMergeStart;
 
-                                worksheet['!cols'] = fitToColumn(result);
-                                worksheet['!rows'] = [{ 'hpt': 40 }];
-                                worksheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 1, c: columnLength - 1 } },
-                                { s: { r: rowFooterMergeStart, c: 0 }, e: { r: rowFooterMergeStart + 2, c: columnLength - 1 } }
-                                ];
+                                    worksheet['!cols'] = fitToColumn(result);
+                                    worksheet['!rows'] = [{ 'hpt': 40 }];
+                                    worksheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 1, c: columnLength - 1 } },
+                                    { s: { r: rowFooterMergeStart, c: 0 }, e: { r: rowFooterMergeStart + 2, c: columnLength - 1 } }
+                                    ];
 
-                                worksheet["!merges"].push({ s: { r: 2, c: 0 }, e: { r: 2, c: columnLength - 1 } });
-                                worksheet["!merges"] = p != '' ? [...worksheet["!merges"], { s: { r: 3, c: columnLength - 2 }, e: { r: 3, c: columnLength - 1 } }] : worksheet["!merges"];
-                                worksheet["!merges"] = f != '' ? [...worksheet["!merges"], { s: { r: 4, c: columnLength - 2 }, e: { r: 4, c: columnLength - 1 } }] : worksheet["!merges"];
-                                worksheet["!merges"] = groupsParams != '' ? [...worksheet["!merges"], { s: { r: 5, c: columnLength - 2 }, e: { r: 5, c: columnLength - 1 } }] : worksheet["!merges"];
-                                worksheet["!merges"] = setsParams != '' ? [...worksheet["!merges"], { s: { r: 6, c: columnLength - 2 }, e: { r: 6, c: columnLength - 1 } }] : worksheet["!merges"];
+                                    worksheet["!merges"].push({ s: { r: 2, c: 0 }, e: { r: 2, c: columnLength - 1 } });
+                                    worksheet["!merges"] = p != '' ? [...worksheet["!merges"], { s: { r: 3, c: columnLength - 2 }, e: { r: 3, c: columnLength - 1 } }] : worksheet["!merges"];
+                                    worksheet["!merges"] = f != '' ? [...worksheet["!merges"], { s: { r: 4, c: columnLength - 2 }, e: { r: 4, c: columnLength - 1 } }] : worksheet["!merges"];
+                                    worksheet["!merges"] = groupsParams != '' ? [...worksheet["!merges"], { s: { r: 5, c: columnLength - 2 }, e: { r: 5, c: columnLength - 1 } }] : worksheet["!merges"];
+                                    worksheet["!merges"] = setsParams != '' ? [...worksheet["!merges"], { s: { r: 6, c: columnLength - 2 }, e: { r: 6, c: columnLength - 1 } }] : worksheet["!merges"];
 
-                                let obj = {
-                                    //index: sheetOrder,
-                                    name: sheetName,
-                                    worksheet: worksheet
-                                }
+                                    let obj = {
+                                        //index: sheetOrder,
+                                        name: sheetName,
+                                        worksheet: worksheet
+                                    }
 
-                                worksheetArr.push(obj);
+                                    obj.name = obj.name.length >= 31 ? obj.name.substring(0, 30) : obj.name;
+                                    workbook.SheetNames.push(obj.name);
+                                    workbook.Sheets[obj.name] = obj.worksheet;
 
-                                if (sheetCount == checkCount) {
-                                    //worksheetArr.sort((a, b) => a.index - b.index);
-                                    worksheetArr.forEach((worksheetInfo) => {
-                                        worksheetInfo.name = worksheetInfo.name.length >= 31 ? worksheetInfo.name.substring(0, 30) : worksheetInfo.name;
-                                        workbook.SheetNames.push(worksheetInfo.name);
-                                        workbook.Sheets[worksheetInfo.name] = worksheetInfo.worksheet;
-                                    });
-                                    // console.log('ended');
                                     resolve();
                                 }
                             });
